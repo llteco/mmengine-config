@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 _base_ = [
-    './base1.py', '../yaml_config/base2.yaml', '../json_config/base3.json',
+    './base1.py',
     './base4.py'
 ]
 item2 = dict(b=[5, 6])

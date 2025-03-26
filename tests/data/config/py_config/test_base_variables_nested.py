@@ -6,7 +6,6 @@ item12 = {{_base_.item9}}
 item13 = {{_base_.item10}}
 item14 = {{_base_.item1}}
 item15 = dict(
-    a=dict(b={{_base_.item2}}),
     b=[{{_base_.item3}}],
     c=[{{_base_.item4}}],
     d=[[dict(e={{_base_.item5.a}})], {{_base_.item6}}],

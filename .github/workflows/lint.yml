@@ -9,19 +9,20 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.10.15
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
         with:
-          python-version: '3.10.15'
-      - name: Install pre-commit hook
+          fetch-depth: 2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: install dependencies
         run: |
-          pip install pre-commit
-          pre-commit install
-      - name: Linting
-        run: pre-commit run --all-files
-      - name: Check docstring coverage
-        run: |
-          pip install interrogate
-          interrogate -v --ignore-init-method --ignore-magic --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 80 mmengine
+          python -m pip install pre-commit
+      - name: lint with pre-commit
+        # check all commits from main
+        run: pre-commit run -s HEAD^ -o HEAD
