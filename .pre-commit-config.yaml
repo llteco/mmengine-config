@@ -1,21 +1,9 @@
 exclude: ^tests/data/
 repos:
   - repo: https://github.com/pre-commit/pre-commit
-    rev: v4.0.0
+    rev: v4.2.0
     hooks:
       - id: validate_manifest
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
-    hooks:
-      - id: flake8
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.11.5
-    hooks:
-      - id: isort
-  - repo: https://github.com/pre-commit/mirrors-yapf
-    rev: v0.32.0
-    hooks:
-      - id: yapf
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -23,44 +11,26 @@ repos:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: requirements-txt-fixer
-      - id: double-quote-string-fixer
       - id: check-merge-conflict
-      - id: fix-encoding-pragma
-        args: ["--remove"]
       - id: mixed-line-ending
         args: ["--fix=lf"]
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.9
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.0.1
     hooks:
-      - id: mdformat
-        args: ["--number"]
-        additional_dependencies:
-          - mdformat-openmmlab
-          - mdformat_frontmatter
-          - linkify-it-py
-  - repo: https://github.com/myint/docformatter
-    rev: 06907d0
+    - id: isort
+      args:
+      - '--profile=black'
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
     hooks:
-      - id: docformatter
-        args: ["--in-place", "--wrap-descriptions", "79"]
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.0.0
+    - id: black
+      args:
+      - '-vv'
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.2
     hooks:
-      - id: pyupgrade
-        args: ["--py36-plus"]
-  - repo: https://github.com/open-mmlab/pre-commit-hooks
-    rev: v0.4.0
-    hooks:
-      - id: check-copyright
-        args: ["mmengine", "tests"]
-      - id: remove-improper-eol-in-cn-docs
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.2.0
-    hooks:
-      - id: mypy
-        exclude: |-
-          (?x)(
-              ^examples
-              | ^docs
-          )
-        additional_dependencies: ["types-setuptools", "types-requests", "types-PyYAML"]
+    - id: flake8
+      additional_dependencies: [Flake8-pyproject]
+      args:
+      - '--ignore=W503,E203,E704'
+      exclude: ^tests/
