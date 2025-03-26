@@ -26,12 +26,15 @@ description = "Only config component from mmengine."
 dependencies = ["addict", "black", "rich"]
 dynamic = ["version"]
 
+[tool.setuptools.dynamic]
+version = {attr = "mme.__version__"}
+
 [project.urls]
 Home = "https://github.com/llteco/mmengine"
 Doc = "https://mmengine.readthedocs.io/en/latest/"
 
 [tool.pyright]
-include = ["mmengine"]
+include = ["mme"]
 
 [tool.flake8]
 ignore = ['E231', 'E241', 'W503']
