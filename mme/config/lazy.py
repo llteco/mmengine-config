@@ -142,6 +142,9 @@ class LazyObject:
         return self._module[0].split(".")[0]
 
     def __call__(self, *args, **kwargs):
+        obj = self.build()
+        if inspect.isclass(obj) or inspect.isfunction(obj):
+            return obj(*args, **kwargs)
         raise RuntimeError()
 
     def __deepcopy__(self, memo):

@@ -5,6 +5,13 @@ import pytest
 
 from mme.config.utils import _get_external_cfg_base_path, _get_package_and_cfg_path
 
+try:
+    import mmdet
+
+    mmdet_fail = False
+except ImportError:
+    mmdet_fail = True
+
 
 def test_get_external_cfg_base_path(tmp_path):
     package_path = tmp_path
@@ -17,6 +24,7 @@ def test_get_external_cfg_base_path(tmp_path):
     assert cfg_path == f'{os.path.join(str(cfg_dir), "cfg_file")}'
 
 
+@pytest.mark.skipif(mmdet_fail, reason="mmdet is not installed")
 def test_get_external_cfg_path():
     external_cfg_path = "mmdet::path/cfg"
     package, rel_cfg_path = _get_package_and_cfg_path(external_cfg_path)

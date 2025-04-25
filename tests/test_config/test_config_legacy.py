@@ -17,6 +17,13 @@ import pytest
 from mme.config import Config, ConfigDict, DictAction
 from mme.config.lazy import LazyObject
 
+try:
+    import mmdet
+
+    mmdet_fail = False
+except ImportError:
+    mmdet_fail = True
+
 
 class TestConfig:
     data_path = osp.join(osp.dirname(osp.dirname(__file__)), "data/")
@@ -736,6 +743,7 @@ class TestConfig:
         assert new_cfg._filename == cfg._filename
         assert new_cfg._text == cfg._text
 
+    @pytest.mark.skipif(mmdet_fail, reason="mmdet is not installed")
     def test_get_external_cfg(self):
         ext_cfg_path = osp.join(
             self.data_path, "config/py_config/test_get_external_cfg.py"

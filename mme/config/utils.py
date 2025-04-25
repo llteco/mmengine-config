@@ -6,11 +6,10 @@ import re
 import sys
 import warnings
 from collections import defaultdict
-from importlib import import_module
+from importlib import import_module, resources
 from importlib.util import find_spec
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
-
-from pkg_resources import DistributionNotFound, get_distribution
 
 PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
 SYSTEM_PYTHON_PREFIX = "/usr/lib/python"
@@ -47,6 +46,41 @@ def load(config_path: str) -> dict:
 
     with open(config_path, encoding="utf-8") as f:
         return yaml.load(f, Loader=yaml.SafeLoader)
+
+
+def dump(
+    obj,
+    file: str | Path | None = None,
+    file_format: str | None = None,
+    backend_args=None,
+    **kwargs,
+):
+    """Dump data to json/yaml/pickle strings or files.
+
+    This method provides a unified api for dumping data as strings or to files,
+    and also supports custom arguments for each file format.
+
+    ``dump`` supports dumping data as strings or to files which is saved to
+    different backends.
+
+    Args:
+        obj (any): The python object to be dumped.
+        file (str or :obj:`Path` or file-like object, optional): If not
+            specified, then the object is dumped to a str, otherwise to a file
+            specified by the filename or file-like object.
+        file_format (str, optional): Same as :func:`load`.
+        backend_args (dict, optional): Arguments to instantiate the
+            prefix of uri corresponding backend. Defaults to None.
+            New in v0.2.0.
+
+    Examples:
+        >>> dump('hello world', '/path/of/your/file')  # disk
+        >>> dump('hello world', 's3://path/of/your/file')  # ceph or petrel
+
+    Returns:
+        bool: True for success, False otherwise.
+    """
+    raise NotImplementedError()
 
 
 def _get_cfg_metainfo(package_path: str, cfg_path: str) -> dict:
@@ -492,8 +526,9 @@ def get_installed_path(package: str) -> str:
     # name. If we want to get the installed path of mmcv-full, we should concat
     # the pkg.location and module name
     try:
-        pkg = get_distribution(package)
-    except DistributionNotFound as e:
+        pkg = resources.files(package)
+        assert isinstance(pkg, Path)
+    except ModuleNotFoundError as e:
         # if the package is not installed, package path set in PYTHONPATH
         # can be detected by `find_spec`
         spec = importlib.util.find_spec(package)
@@ -510,26 +545,7 @@ def get_installed_path(package: str) -> str:
         else:
             raise e
 
-    possible_path = osp.join(pkg.location, package)  # type: ignore
-    if osp.exists(possible_path):
-        return possible_path
-    else:
-        return osp.join(pkg.location, package2module(package))  # type: ignore
-
-
-def package2module(package: str):
-    """Infer module name from package.
-
-    Args:
-        package (str): Package to infer module name.
-    """
-
-    pkg = get_distribution(package)
-    if pkg.has_metadata("top_level.txt"):
-        module_name = pkg.get_metadata("top_level.txt").split("\n")[0]
-        return module_name
-    else:
-        raise ValueError(f"can not infer the module name of {package}")
+    return str(pkg)
 
 
 def import_modules_from_strings(imports, allow_failed_imports=False):
