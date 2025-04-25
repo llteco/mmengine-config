@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
 [project]
 name = "mmengine-config"
@@ -10,7 +10,7 @@ authors = [
     { name = "MMEngine Authors", email = "openmmlab@gmail.com" },
     { name = "Wenyi Tang", email = "wenyitang@outlook.com" },
 ]
-license = { file = "LICENSE" }
+license-files = ["LICENSE"]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
@@ -26,12 +26,12 @@ description = "Only config component from mmengine."
 dependencies = ["addict", "black", "rich"]
 dynamic = ["version"]
 
-[tool.setuptools.dynamic]
-version = {attr = "mme.__version__"}
-
 [project.urls]
 Home = "https://github.com/llteco/mmengine"
 Doc = "https://mmengine.readthedocs.io/en/latest/"
+
+[tool.flit.module]
+name = "mme"
 
 [tool.pyright]
 include = ["mme"]
