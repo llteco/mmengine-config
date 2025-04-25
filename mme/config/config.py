@@ -42,6 +42,7 @@ from .utils import (
     _get_external_cfg_path,
     _get_package_and_cfg_path,
     _is_builtin_module,
+    dump,
     get_installed_path,
     import_modules_from_strings,
 )
@@ -104,10 +105,10 @@ class ConfigDict(Dict):
 
     lazy = False
 
-    def __init__(__self, *args, **kwargs):
-        object.__setattr__(__self, "__parent", kwargs.pop("__parent", None))
-        object.__setattr__(__self, "__key", kwargs.pop("__key", None))
-        object.__setattr__(__self, "__frozen", False)
+    def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
+        object.__setattr__(self, "__parent", kwargs.pop("__parent", None))
+        object.__setattr__(self, "__key", kwargs.pop("__key", None))
+        object.__setattr__(self, "__frozen", False)
         for arg in args:
             if not arg:
                 continue
@@ -116,18 +117,18 @@ class ConfigDict(Dict):
             # the LazyObject will not be converted.
             if isinstance(arg, ConfigDict):
                 for key, val in dict.items(arg):
-                    __self[key] = __self._hook(val)
+                    self[key] = self._hook(val)
             elif isinstance(arg, dict):
                 for key, val in arg.items():
-                    __self[key] = __self._hook(val)
+                    self[key] = self._hook(val)
             elif isinstance(arg, tuple) and (not isinstance(arg[0], tuple)):
-                __self[arg[0]] = __self._hook(arg[1])
+                self[arg[0]] = self._hook(arg[1])
             else:
                 for key, val in iter(arg):
-                    __self[key] = __self._hook(val)
+                    self[key] = self._hook(val)
 
         for key, val in dict.items(kwargs):
-            __self[key] = __self._hook(val)
+            self[key] = self._hook(val)
 
     def __missing__(self, name):
         raise KeyError(name)
@@ -149,7 +150,9 @@ class ConfigDict(Dict):
     @classmethod
     def _hook(cls, item):
         # avoid to convert user defined dict to ConfigDict.
-        if type(item) in (dict, OrderedDict):
+        if isinstance(item, Config):
+            return item._cfg_dict
+        elif type(item) in (dict, OrderedDict):
             return cls(item)
         elif isinstance(item, (list, tuple)):
             return type(item)(cls._hook(elem) for elem in item)
@@ -416,6 +419,13 @@ class Config:
 
     .. _config tutorial: https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html
     """  # noqa: E501
+
+    _cfg_dict: ConfigDict
+    _filename: str | None
+    _format_python_code: bool
+    _imported_names: set[str]
+    _text: str
+    _env_variables: dict[str, str]
 
     def __init__(
         self,
@@ -1388,7 +1398,7 @@ class Config:
         return parser, cfg
 
     @property
-    def filename(self) -> str:
+    def filename(self) -> str | None:
         """Get file name of config."""
         return self._filename
 
@@ -1531,12 +1541,19 @@ class Config:
     def __setattr__(self, name, value):
         if isinstance(value, dict):
             value = ConfigDict(value)
+        elif isinstance(value, Config):
+            value = value._cfg_dict
         self._cfg_dict.__setattr__(name, value)
 
     def __setitem__(self, name, value):
         if isinstance(value, dict):
             value = ConfigDict(value)
+        elif isinstance(value, Config):
+            value = value._cfg_dict
         self._cfg_dict.__setitem__(name, value)
+
+    def __delattr__(self, name):
+        delattr(self._cfg_dict, name)
 
     def __iter__(self):
         return iter(self._cfg_dict)
@@ -1583,6 +1600,32 @@ class Config:
         super().__setattr__("_env_variables", state[3])
         super().__setattr__("_format_python_code", state[4])
         super().__setattr__("_imported_names", state[5])
+
+    def dump(self, file: Optional[Union[str, Path]] = None):
+        """Dump config to file or return config text.
+
+        Args:
+            file (str or Path, optional): If not specified, then the object
+            is dumped to a str, otherwise to a file specified by the filename.
+            Defaults to None.
+
+        Returns:
+            str or None: Config text.
+        """
+        file = str(file) if isinstance(file, Path) else file
+        cfg_dict = self.to_dict()
+        if file is None:
+            if self.filename is None or self.filename.endswith(".py"):
+                return self.pretty_text
+            else:
+                file_format = self.filename.split(".")[-1]
+                return dump(cfg_dict, file_format=file_format)
+        elif file.endswith(".py"):
+            with open(file, "w", encoding="utf-8") as f:
+                f.write(self.pretty_text)
+        else:
+            file_format = file.split(".")[-1]
+            return dump(cfg_dict, file=file, file_format=file_format)
 
     def merge_from_dict(self, options: dict, allow_list_keys: bool = True) -> None:
         """Merge list into cfg_dict.
