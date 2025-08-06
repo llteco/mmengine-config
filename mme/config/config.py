@@ -36,6 +36,7 @@ from .lazy import LazyAttr, LazyObject
 from .utils import (
     ConfigParsingError,
     ImportTransformer,
+    OverideAssignTransformer,
     RemoveAssignFromAST,
     _gather_abs_import_lazyobj,
     _get_external_cfg_base_path,
@@ -584,7 +585,7 @@ class Config:
         return cfg
 
     @staticmethod
-    def _get_base_modules(nodes: list) -> list:
+    def _get_base_modules(nodes: list) -> tuple[list, dict]:
         """Get base module name from parsed code.
 
         Args:
@@ -592,6 +593,7 @@ class Config:
 
         Returns:
             list: Name of base modules.
+            dict: Key-value pairs to override values in base modules.
         """
 
         def _get_base_module_from_with(with_nodes: list) -> list:
@@ -617,6 +619,13 @@ class Config:
                 base_modules.append(node.level * "." + node.module)
             return base_modules
 
+        def _get_override_assignments(keywords: list[ast.keyword], ssa: ast.Module):
+            override: dict = dict(_ssa=ssa)
+            for k in keywords:
+                override[k.arg] = k.value
+            return override
+
+        single_assignments = ast.Module([], [])
         for idx, node in enumerate(nodes):
             if (
                 isinstance(node, ast.Assign)
@@ -633,7 +642,10 @@ class Config:
                     "in https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html"  # noqa: E501
                 )
 
-            if not isinstance(node, ast.With):
+            if isinstance(node, ast.Assign):
+                single_assignments.body.append(node)
+                continue
+            elif not isinstance(node, ast.With):
                 continue
 
             expr = node.items[0].context_expr
@@ -645,6 +657,13 @@ class Config:
                 raise ConfigParsingError(
                     "Only `read_base` context manager can be used in the " "config"
                 )
+            # Get override assignments from read_base
+            # ```
+            # with read_base(var_x=1, var_y=(3, 4)):
+            #     from .._base_.default_runtime import *
+            # ```
+            # The override assignments are `var_x=1` and `var_y=(3, 4)`
+            override_ssa = _get_override_assignments(expr.keywords, single_assignments)
 
             # The original code:
             # ```
@@ -660,8 +679,8 @@ class Config:
             for nested_idx, nested_node in enumerate(node.body):
                 nodes.insert(idx + nested_idx + 1, nested_node)
             nodes.pop(idx)
-            return _get_base_module_from_with(node.body)
-        return []
+            return _get_base_module_from_with(node.body), override_ssa
+        return [], {}
 
     @staticmethod
     def _validate_py_syntax(filename: str):
@@ -1025,11 +1044,15 @@ class Config:
         return cfg_dict, cfg_text, env_variables
 
     @staticmethod
-    def _parse_lazy_import(filename: str) -> Tuple[ConfigDict, set]:
+    def _parse_lazy_import(
+        filename: str, override_vars: None | dict = None
+    ) -> Tuple[ConfigDict, set]:
         """Transform file to variables dictionary.
 
         Args:
             filename (str): Name of config file.
+            override_vars (dict, optional): Key-value pairs to override the
+                variables in the file. Defaults to None.
 
         Returns:
             Tuple[dict, dict]: ``cfg_dict`` and ``imported_names``.
@@ -1084,7 +1107,7 @@ class Config:
             parsed_codes = ast.parse(f.read())
             # get the names of base modules, and remove the
             # `with read_base():'` statement
-            base_modules = Config._get_base_modules(parsed_codes.body)
+            base_modules, base_overrides = Config._get_base_modules(parsed_codes.body)
             base_imported_names = set()
             for base_module in base_modules:
                 # If base_module means a relative import, assuming the level is
@@ -1128,7 +1151,7 @@ class Config:
                         "logic"
                     )
                 _base_cfg_dict, _base_imported_names = Config._parse_lazy_import(
-                    module_path
+                    module_path, override_vars=base_overrides
                 )  # noqa: E501
                 base_imported_names |= _base_imported_names
                 # The base_dict will be:
@@ -1153,6 +1176,9 @@ class Config:
             modified_code, abs_imported = _gather_abs_import_lazyobj(
                 modified_code, filename=filename
             )
+            if override_vars:
+                transform2 = OverideAssignTransformer(override_vars)
+                modified_code = transform2.visit(modified_code)
             imported_names = transform.imported_obj | abs_imported
             imported_names |= base_imported_names
             modified_code = ast.fix_missing_locations(modified_code)
@@ -1519,11 +1545,13 @@ class Config:
 
                 style = black.Mode()
                 text = black.format_str(text, mode=style)
-            except Exception as e:
-                raise SyntaxError(
+            except ImportError:
+                warnings.warn("formater 'black' is not found.")
+            except ValueError:
+                warnings.warn(
                     "Failed to format the config file, please "
                     f"check the syntax of: \n{text}"
-                ) from e
+                )
         return text
 
     def __repr__(self):
@@ -1902,7 +1930,7 @@ class DictAction(Action):
 
 
 @contextmanager
-def read_base():
+def read_base(**override_ssa):
     """Context manager to mark the base config.
 
     The pure Python-style configuration file allows you to use the import

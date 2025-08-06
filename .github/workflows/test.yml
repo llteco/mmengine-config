@@ -27,3 +27,5 @@ jobs:
       - name: run unit test
         # check all commits from main
         run: pytest --cov=mme tests/test_config
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
