@@ -11,9 +11,6 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-PYTHON_ROOT_DIR = osp.dirname(osp.dirname(sys.executable))
-SYSTEM_PYTHON_PREFIX = "/usr/lib/python"
-
 MODULE2PACKAGE = {
     "mmcls": "mmcls",
     "mmdet": "mmdet",
