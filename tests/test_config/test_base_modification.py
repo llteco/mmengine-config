@@ -26,8 +26,14 @@ data_path = osp.join(osp.dirname(osp.dirname(__file__)), "data/")
 
 
 def test_config_change_base_var():
+    base_cfg = Config.fromfile(
+        osp.join(data_path, "config/lazy_module_config/test_base.py")
+    )
+    assert base_cfg.x == 1
+    assert base_cfg.dict_x["x"] == 1
+
     cfg = Config.fromfile(
         osp.join(data_path, "config/lazy_module_config/test_change_base_var.py")
     )
-    assert cfg.x == 2
-    assert cfg.dict_x["x"] == 1
+    assert cfg.x == 3
+    assert cfg.dict_x["x"] == 2

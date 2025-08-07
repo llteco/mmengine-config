@@ -3,7 +3,6 @@ import os
 from importlib.util import find_spec as find_module
 
 import numpy
-import numpy.compat
 import numpy.linalg as linalg
 
 from ._base_.default_runtime import default_scope as scope

@@ -192,6 +192,28 @@ class RemoveAssignFromAST(ast.NodeTransformer):
             return node
 
 
+class OverideAssignTransformer(ast.NodeTransformer):
+    """Override assign values from the given dict."""
+
+    def __init__(self, override_vars: dict):
+        self.override_vars = override_vars
+
+    def visit_Assign(self, node: ast.Assign):
+        # must be SSA
+        if len(node.targets) != 1:
+            return node
+        if (key := node.targets[0].id) in self.override_vars:
+            assert isinstance(key, str)
+            node.value = self.override_vars[key]
+        return node
+
+    def visit_Module(self, node: ast.Module):
+        self.generic_visit(node)
+        ssa: ast.Module = self.override_vars.get("_ssa", ast.Module([], []))
+        node.body = ssa.body + node.body
+        return node
+
+
 def _is_builtin_module(module_name: str) -> bool:
     """Check if a module is a built-in module.
 
@@ -201,6 +223,8 @@ def _is_builtin_module(module_name: str) -> bool:
     if module_name.startswith("."):
         return False
     if module_name.startswith("mmengine.config"):
+        return True
+    if module_name.startswith("mme.config"):
         return True
     if module_name in sys.builtin_module_names:
         return True
@@ -212,11 +236,7 @@ def _is_builtin_module(module_name: str) -> bool:
     if origin_path is None:
         return False
     origin_path = osp.abspath(origin_path)
-    if (
-        "site-package" in origin_path
-        or "dist-package" in origin_path
-        or not origin_path.startswith((PYTHON_ROOT_DIR, SYSTEM_PYTHON_PREFIX))
-    ):
+    if "site-package" in origin_path or "dist-package" in origin_path:
         return False
     else:
         return True

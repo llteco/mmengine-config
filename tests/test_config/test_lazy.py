@@ -8,7 +8,6 @@ from typing import Any, Dict
 from unittest import TestCase
 
 import numpy
-import numpy.compat
 import numpy.linalg as linalg
 from rich.progress import Progress
 
@@ -53,12 +52,9 @@ class TestImportTransformer(TestCase):
         # 1.3 Build module from LazyObject. amp and functional can be accessed
         imported_numpy = lazy_numpy.build()
         self.assertIs(imported_numpy.linalg, linalg)
-        self.assertIs(imported_numpy.compat, numpy.compat)
 
         # 1.4.1 Build module from LazyAttr
         imported_linalg = lazy_numpy.linalg.build()
-        imported_compat = lazy_numpy.compat.build()
-        self.assertIs(imported_compat, numpy.compat)
         self.assertIs(imported_linalg, linalg)
 
         # 1.4.2 build class method from LazyAttr
