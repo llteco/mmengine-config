@@ -2,6 +2,7 @@
 import ast
 import copy
 import difflib
+import inspect
 import os
 import os.path as osp
 import platform
@@ -1457,6 +1458,11 @@ class Config:
         def _format_basic_types(k, v, use_mapping=False):
             if isinstance(v, str):
                 v_str = repr(v)
+            elif inspect.isclass(v):
+                if v.__module__:
+                    v_str = f'"{v.__module__}.{v.__name__}"'
+                else:
+                    v_str = f'"{v.__name__}"'
             else:
                 v_str = str(v)
 
