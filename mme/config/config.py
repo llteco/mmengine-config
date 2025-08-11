@@ -1191,6 +1191,8 @@ class Config:
             for key, value in global_dict.items():
                 if key.startswith("__") or key in ["LazyObject"]:
                     continue
+                elif inspect.ismodule(value):  # LazyObject is not module here
+                    continue
                 ret[key] = value
             # convert dict to ConfigDict
             cfg_dict = Config._dict_to_config_dict_lazy(ret)
