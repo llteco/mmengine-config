@@ -15,10 +15,10 @@ Example::
     from sys import platform
 
     d = dict(thread=os.cpu_count())
-    if sys.platform == "win32":
+    if platform == "win32":
         d.update(name="windows")
     else:
-        d.update(name=sys.platform.lower())
+        d.update(name=platform.lower())
 
     # main.py
     cfg = Config.fromfile("config.py")
