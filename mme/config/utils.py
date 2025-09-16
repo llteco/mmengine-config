@@ -199,6 +199,8 @@ class OverideAssignTransformer(ast.NodeTransformer):
         # must be SSA
         if len(node.targets) != 1:
             return node
+        elif not hasattr(node.targets[0], "id"):
+            return node
         if (key := node.targets[0].id) in self.override_vars:
             assert isinstance(key, str)
             node.value = self.override_vars[key]
